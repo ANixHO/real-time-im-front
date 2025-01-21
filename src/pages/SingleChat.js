@@ -33,14 +33,14 @@ function SingleChat() {
 
     useEffect(() => {
         if (lastMessage !== null) {
-            lastMessage.data.arrayBuffer().then(arrayBuffer =>{
+            lastMessage.data.arrayBuffer().then(arrayBuffer => {
                 let bytes = new Uint8Array(arrayBuffer);
                 let receivedMessage = new messages.Message.deserializeBinary(bytes);
-                if (receivedMessage.getType() !== messages.Message.ContentType.PONG_SIGNAL){
+                if (receivedMessage.getType() !== messages.Message.ContentType.PONG_SIGNAL) {
                     let receivedData = 'response:' + receivedMessage.getContent();
                     setReceiveMessageHistory(prev => [...prev, receivedData]);
                     setMessageHistory(prev => [...prev, receivedData]);
-                }else{
+                } else {
                     console.log("get pong from message");
                 }
 
@@ -50,7 +50,6 @@ function SingleChat() {
 
     const handleClickSendMessage = useCallback((e) => {
             e.preventDefault();
-            console.log(userMessage);
             if (userMessage.trim()) {
                 let message = new messages.Message();
                 message.setType(messages.Message.ContentType.PRIVATE_CHAT);
@@ -59,10 +58,8 @@ function SingleChat() {
                 message.setContent(userMessage);
                 let binaryData = message.serializeBinary();
 
-                console.log("serialized message" + binaryData)
                 sendMessage(binaryData);
 
-                console.log(userMessage);
                 setSendMessageHistory(prev => prev.concat(userMessage));
                 setMessageHistory(prev => prev.concat(userMessage));
                 setUserMessage("");
@@ -80,8 +77,15 @@ function SingleChat() {
     }[readyState];
 
     useEffect(() => {
+        if (connectionStatus === "Open") {
+            let addUserChannel = new messages.Message();
+            addUserChannel.setType(messages.Message.ContentType.ADD_USER_CHANNEL);
+            addUserChannel.setSenderid("1");
+            let addUserChannelMessage = addUserChannel.serializeBinary();
+            sendMessage(addUserChannelMessage);
+        }
         const time = new Date().toDateString();
-        setConnectionState("=>" +  connectionStatus + " [ " + time +"]");
+        setConnectionState("=>" + connectionStatus + " [ " + time + "]");
     }, [connectionStatus]);
 
     return (
