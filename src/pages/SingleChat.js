@@ -14,14 +14,14 @@ function SingleChat() {
     const messages = require('../proto/message_pb');
 
     const ping = new messages.Message().setType(messages.Message.ContentType.PING_SIGNAL).serializeBinary();
-    const pong = new messages.Message().setType(messages.Message.ContentType.PONG_SIGNAL).serializeBinary();
+    // const pong = new Blob(new messages.Message().setType(messages.Message.ContentType.PONG_SIGNAL).serializeBinary());
 
 
     const {sendMessage, lastMessage, readyState} = useWebSocket(socketURL,
         {
             heartbeat: {
                 message: ping,
-                returnMessage: pong,
+                returnMessage: 'pong',
                 timeout: 30000, // 1 minute, if no response is received, the connection will be closed
                 interval: 15000, // every 15 seconds, a ping message will be sent
             },
@@ -40,6 +40,8 @@ function SingleChat() {
                     let receivedData = 'response:' + receivedMessage.getContent();
                     setReceiveMessageHistory(prev => [...prev, receivedData]);
                     setMessageHistory(prev => [...prev, receivedData]);
+                }else{
+                    console.log("get pong from message");
                 }
 
             });
