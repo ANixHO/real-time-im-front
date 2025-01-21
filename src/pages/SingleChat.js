@@ -11,40 +11,62 @@ function SingleChat() {
     const [userMessage, setUserMessage] = useState("");
     const [connectionState, setConnectionState] = useState("");
 
+    const messages = require('../proto/message_pb');
+
+    const ping = new messages.Message().setType(messages.Message.ContentType.PING_SIGNAL).serializeBinary();
+    const pong = new messages.Message().setType(messages.Message.ContentType.PONG_SIGNAL).serializeBinary();
+
+
     const {sendMessage, lastMessage, readyState} = useWebSocket(socketURL,
         {
-            // heartbeat: {
-            //     message: 'ping',
-            //     returnMessage: 'pong',
-            //     timeout: 30000, // 1 minute, if no response is received, the connection will be closed
-            //     interval: 15000, // every 25 seconds, a ping message will be sent
-            // }
-            // retryOnError: true,
-            // shouldReconnect: () => true,
-            // reconnectInterval: 3000,
-            // reconnectAttempts: 10
+            heartbeat: {
+                message: ping,
+                returnMessage: pong,
+                timeout: 30000, // 1 minute, if no response is received, the connection will be closed
+                interval: 15000, // every 15 seconds, a ping message will be sent
+            },
+            retryOnError: true,
+            shouldReconnect: () => true,
+            reconnectInterval: 3000,
+            reconnectAttempts: 10
         });
 
     useEffect(() => {
         if (lastMessage !== null) {
-            console.log(lastMessage);
-            setReceiveMessageHistory(prev => [...prev, lastMessage.data]);
-            setMessageHistory(prev => [...prev, lastMessage.data]);
+            lastMessage.data.arrayBuffer().then(arrayBuffer =>{
+                let bytes = new Uint8Array(arrayBuffer);
+                let receivedMessage = new messages.Message.deserializeBinary(bytes);
+                if (receivedMessage.getType() !== messages.Message.ContentType.PONG_SIGNAL){
+                    let receivedData = 'response:' + receivedMessage.getContent();
+                    setReceiveMessageHistory(prev => [...prev, receivedData]);
+                    setMessageHistory(prev => [...prev, receivedData]);
+                }
+
+            });
         }
-    }, [lastMessage]);
+    }, [lastMessage, messages]);
 
     const handleClickSendMessage = useCallback((e) => {
             e.preventDefault();
             console.log(userMessage);
             if (userMessage.trim()) {
-                sendMessage(userMessage);
+                let message = new messages.Message();
+                message.setType(messages.Message.ContentType.PRIVATE_CHAT);
+                message.setSenderid("1");
+                message.setChatid("1");
+                message.setContent(userMessage);
+                let binaryData = message.serializeBinary();
+
+                console.log("serialized message" + binaryData)
+                sendMessage(binaryData);
+
                 console.log(userMessage);
                 setSendMessageHistory(prev => prev.concat(userMessage));
                 setMessageHistory(prev => prev.concat(userMessage));
                 setUserMessage("");
             }
         },
-        [userMessage,sendMessage]
+        [userMessage, sendMessage, messages]
     );
 
     const connectionStatus = {
@@ -62,7 +84,7 @@ function SingleChat() {
 
     return (
         <Container>
-            <Row>
+            <Row className={"justify-content-center"}>
                 <Col xs={7}>
                     <h2>Connection status: {connectionState}</h2>
                 </Col>
@@ -72,7 +94,7 @@ function SingleChat() {
                     <Col xs={5}>
                         <Form.Control
                             type={"text"}
-                            // value={userMessage}
+                            value={userMessage}
                             onChange={(e) => (setUserMessage(e.target.value))}
                         />
                     </Col>
